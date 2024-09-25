@@ -1,0 +1,27 @@
+display_name: Hazel HTEX
+engine:
+  type: GlobusComputeEngine
+
+  address:
+    type: address_by_interface
+    ifname: ens5f0
+
+  provider:
+    type: LSFProvider
+    launcher:
+      type: SingleNodeLauncher
+
+    walltime: 00:30:00
+    nodes_per_block: 1
+    init_blocks: 1
+    max_blocks: 1
+
+    queue: standard
+
+    worker_init: |
+      module load conda
+      conda activate /path/to/your/condaenv/conda_env
+
+    scheduler_options: "# BSUB -R span[hosts=1]"
+    cores_per_node: 12
+    cmd_timeout: 60

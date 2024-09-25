@@ -207,6 +207,16 @@ scheduler, and uses the ``SrunLauncher`` to launch workers.
    :language: yaml
 
 
+Hazel (NCSU)
+^^^^^^^^^^^^
+
+The Hazel cluster uses the LSF scheduler; the following configuration assumes the user
+is running on a login node, uses the |LSFProvider|_ and the |SingleNodeLauncher|_.
+
+.. literalinclude:: configs/ncsu-hazel.yaml
+   :language: yaml
+
+
 Open Science Pool
 ^^^^^^^^^^^^^^^^^
 
@@ -224,7 +234,6 @@ to the workers.
    shared-filesystem, **encryption** is disabled in the configuration below.
 
 .. literalinclude:: configs/ospool.yaml
-   :language: yaml
 
 
 Pinning Workers to devices
@@ -253,6 +262,13 @@ specific identity assigned: ``CUDA_VISIBLE_DEVICES``, ``ROCR_VISIBLE_DEVICES``,
 .. _GCEngine: reference/engine.html
 .. |HighThroughputExecutor| replace:: ``HighThroughputExecutor``
 .. _HighThroughputExecutor: https://parsl.readthedocs.io/en/stable/stubs/parsl.executors.HighThroughputExecutor.html
+
+.. |Providers| replace:: ``Providers``
+.. _Providers: https://parsl.readthedocs.io/en/stable/reference.html#providers
+.. |LSFProvider| replace:: ``LSFProvider``
+.. _LSFProvider: https://parsl.readthedocs.io/en/latest/stubs/parsl.providers.LSFProvider.html
+.. |SingleNodeLauncher| replace:: ``SingleNodeLauncher``
+.. _SingleNodeLauncher: https://parsl.readthedocs.io/en/latest/stubs/parsl.launchers.SingleNodeLauncher.html
 
 .. |GlobusMPIEngine| replace:: ``GlobusMPIEngine``
 .. _GlobusMPIEngine: reference/mpi_engine.html
