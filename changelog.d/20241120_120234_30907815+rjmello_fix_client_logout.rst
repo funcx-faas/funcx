@@ -1,4 +1,0 @@
-Bug Fixes
-^^^^^^^^^
-
-- ``Client.logout()`` no longer raises an ``AttributeError``.

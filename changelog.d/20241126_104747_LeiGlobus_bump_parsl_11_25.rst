@@ -1,9 +1,0 @@
-New Functionality
-^^^^^^^^^^^^^^^^
-
-- Added ipv6 support for GlobusComputeEngine by upgrading Parsl
-
-Changed
-^^^^^^^
-
-- Bumped ``parsl`` dependency version to `2024.11.25 <https://pypi.org/project/parsl/2024.11.25/>`_.
