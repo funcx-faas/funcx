@@ -211,7 +211,7 @@ def test_batch_created_websocket_queue(gcc, create_result_queue):
 
 
 @pytest.mark.parametrize(
-    "strategy", [s for s in SELECTABLE_STRATEGIES if not s._for_code]
+    "strategy", [s for s in SELECTABLE_STRATEGIES if not s.for_code]
 )
 def test_batch_respects_serialization_strategy(gcc, strategy):
     gcc.fx_serializer = ComputeSerializer(strategy_data=strategy())

@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class DillDataBase64(SerializationStrategy):
     identifier = "00\n"
-    _for_code = False
+    for_code = False
 
     def __init__(self):
         super().__init__()
@@ -34,7 +34,7 @@ class DillDataBase64(SerializationStrategy):
 
 class JSONData(SerializationStrategy):
     identifier = "11\n"
-    _for_code = False
+    for_code = False
 
     def __init__(self):
         super().__init__()
@@ -59,7 +59,7 @@ class DillCodeSource(SerializationStrategy):
     """
 
     identifier = "04\n"
-    _for_code = True
+    for_code = True
 
     def __init__(self):
         super().__init__()
@@ -89,7 +89,7 @@ class DillCodeTextInspect(SerializationStrategy):
     """
 
     identifier = "03\n"
-    _for_code = True
+    for_code = True
 
     def __init__(self):
         super().__init__()
@@ -119,7 +119,7 @@ class PickleCode(SerializationStrategy):
     """
 
     identifier = "02\n"
-    _for_code = True
+    for_code = True
 
     def __init__(self):
         super().__init__()
@@ -145,7 +145,7 @@ class DillCode(SerializationStrategy):
     """
 
     identifier = "01\n"
-    _for_code = True
+    for_code = True
 
     def __init__(self):
         super().__init__()
@@ -171,7 +171,7 @@ class CombinedCode(SerializationStrategy):
     """
 
     identifier = "10\n"
-    _for_code = True
+    for_code = True
 
     # Functions are serialized using the following strategies and the resulting encoded
     # versions are stored as chunks.  Allows redundancy if one of the strategies fails

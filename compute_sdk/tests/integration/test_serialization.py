@@ -327,7 +327,7 @@ def test_compute_serializer_defaults():
 
 @pytest.mark.parametrize("strategy", concretes.SELECTABLE_STRATEGIES)
 def test_selectable_serialization(strategy):
-    if strategy._for_code:
+    if strategy.for_code:
         serializer = ComputeSerializer(strategy_code=strategy())
         data = foo
     else:
@@ -340,6 +340,7 @@ def test_selectable_serialization(strategy):
 def test_serializer_errors_on_unknown_strategy():
     class NewStrategy(SerializationStrategy):
         identifier = "aa\n"
+        for_code = True
 
         def serialize(self, data):
             pass
@@ -352,15 +353,17 @@ def test_serializer_errors_on_unknown_strategy():
     with pytest.raises(SerializationError):
         ComputeSerializer(strategy_code=strategy)
 
+    NewStrategy.for_code = False
+
     with pytest.raises(SerializationError):
         ComputeSerializer(strategy_data=strategy)
 
 
 @pytest.mark.parametrize(
-    "strategy_code", (s for s in concretes.SELECTABLE_STRATEGIES if s._for_code)
+    "strategy_code", (s for s in concretes.SELECTABLE_STRATEGIES if s.for_code)
 )
 @pytest.mark.parametrize(
-    "strategy_data", (s for s in concretes.SELECTABLE_STRATEGIES if not s._for_code)
+    "strategy_data", (s for s in concretes.SELECTABLE_STRATEGIES if not s.for_code)
 )
 @pytest.mark.parametrize(
     "function, args, kwargs",

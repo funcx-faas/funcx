@@ -1,4 +1,5 @@
-from abc import ABCMeta, abstractmethod
+import typing as t
+from abc import ABC, abstractmethod
 
 from globus_compute_sdk.errors import DeserializationError
 
@@ -6,7 +7,7 @@ from globus_compute_sdk.errors import DeserializationError
 IDENTIFIER_LENGTH = 3
 
 
-class SerializationStrategy(metaclass=ABCMeta):
+class SerializationStrategy(ABC):
     """A SerializationStrategy is in charge of converting function source code or
     arguments into string data and back again.
     """
@@ -16,10 +17,8 @@ class SerializationStrategy(metaclass=ABCMeta):
         if len(cls.identifier) != IDENTIFIER_LENGTH:
             raise ValueError(f"Identifiers must be {IDENTIFIER_LENGTH} characters long")
 
-    @property
-    @abstractmethod
-    def identifier(self):
-        pass
+    identifier: t.ClassVar[str]
+    for_code: t.ClassVar[bool]
 
     def chomp(self, payload: str) -> str:
         """If the payload starts with the identifier, return the remaining block
