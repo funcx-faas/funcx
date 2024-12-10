@@ -301,7 +301,7 @@ When sending functions and arguments for execution on a Compute endpoint, the SD
 the ``ComputeSerializer`` class to convert data to and from a format that can be easily
 sent over the wire. Internally, ``ComputeSerializer`` uses instances of
 ``SerializationStrategy`` to do the actual work of serializing (converting function code
-arguments to strings) and deserializing (converting well-formatted strings back into
+and arguments to strings) and deserializing (converting well-formatted strings back into
 function code and arguments).
 
 The default strategies are ``DillCode`` for function code and ``DillDataBase64`` for
