@@ -25,6 +25,12 @@ class VersionMismatch(ComputeError):
 class SerdeError(ComputeError):
     """Base class for SerializationError and DeserializationError"""
 
+    def __init__(self, reason: str):
+        self.reason = reason
+
+    def __repr__(self):
+        return self.reason
+
 
 class SerializationError(SerdeError):
     """Something failed during serialization."""

@@ -257,7 +257,7 @@ STRATEGIES_MAP: dict[str, t.Type[SerializationStrategy]] = {
     CombinedCode.identifier: CombinedCode,
 }
 
-SELECTABLE_STRATEGIES = [
+SELECTABLE_STRATEGIES: list[type[SerializationStrategy]] = [
     DillDataBase64,
     JSONData,
     DillCodeSource,
