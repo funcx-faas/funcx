@@ -17,6 +17,7 @@ from globus_compute_endpoint.engines.base import (
     GlobusComputeEngineBase,
     ReportingThread,
 )
+from globus_compute_sdk.serialize.facade import DeserializerAllowlist
 from parsl.executors.high_throughput.executor import HighThroughputExecutor
 from parsl.jobs.job_status_poller import JobStatusPoller
 
@@ -51,6 +52,7 @@ class GlobusComputeEngine(GlobusComputeEngineBase):
         strategy: str | None = None,
         job_status_kwargs: t.Optional[JobStatusPollerKwargs] = None,
         run_in_sandbox: bool = False,
+        allowed_serializers: DeserializerAllowlist | None = None,
         **kwargs,
     ):
         """``GlobusComputeEngine`` is a shim over `Parsl's HighThroughputExecutor
@@ -108,7 +110,10 @@ class GlobusComputeEngine(GlobusComputeEngineBase):
         self.label = label or type(self).__name__
         self._status_report_thread = ReportingThread(target=self.report_status, args=[])
         super().__init__(
-            *args, max_retries_on_system_failure=max_retries_on_system_failure, **kwargs
+            *args,
+            max_retries_on_system_failure=max_retries_on_system_failure,
+            allowed_serializers=allowed_serializers,
+            **kwargs,
         )
         self.strategy = strategy
 

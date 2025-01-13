@@ -22,6 +22,7 @@ from globus_compute_endpoint.exception_handling import (
     get_error_string,
     get_result_error_details,
 )
+from globus_compute_sdk.serialize.facade import ComputeSerializer, DeserializerAllowlist
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -80,6 +81,7 @@ class GlobusComputeEngineBase(ABC, RepresentationMixin):
         endpoint_id: uuid.UUID | None = None,
         max_retries_on_system_failure: int = 0,
         working_dir: str | os.PathLike = "tasks_working_dir",
+        allowed_serializers: DeserializerAllowlist | None = None,
         **kwargs: object,
     ):
         """
@@ -106,6 +108,7 @@ class GlobusComputeEngineBase(ABC, RepresentationMixin):
         """
         self._shutdown_event = threading.Event()
         self.endpoint_id = endpoint_id
+        self.serde = ComputeSerializer(allowed_deserializer_types=allowed_serializers)
         self.max_retries_on_system_failure = max_retries_on_system_failure
         self._retry_table: dict[str, dict] = {}
         # remove these unused vars that we are adding to just keep
@@ -273,6 +276,7 @@ class GlobusComputeEngineBase(ABC, RepresentationMixin):
                 self.endpoint_id,
                 run_dir=self.working_dir,
                 run_in_sandbox=self.run_in_sandbox,
+                serde=self.serde,
             )
         except Exception as e:
             future = Future()

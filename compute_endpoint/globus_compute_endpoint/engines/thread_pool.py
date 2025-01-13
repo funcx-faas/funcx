@@ -17,16 +17,27 @@ from globus_compute_endpoint.engines.base import (
     GlobusComputeEngineBase,
     ReportingThread,
 )
+from globus_compute_sdk.serialize.facade import DeserializerAllowlist
 
 logger = logging.getLogger(__name__)
 
 
 class ThreadPoolEngine(GlobusComputeEngineBase):
-    def __init__(self, *args, label: str = "ThreadPoolEngine", **kwargs):
+    def __init__(
+        self,
+        *args,
+        label: str = "ThreadPoolEngine",
+        allowed_serializers: DeserializerAllowlist | None = None,
+        **kwargs,
+    ):
         self.label = label
         self.executor = NativeExecutor(*args, **kwargs)
         self._status_report_thread = ReportingThread(target=self.report_status, args=[])
-        super().__init__(*args, **kwargs)
+        super().__init__(
+            *args,
+            **kwargs,
+            allowed_serializers=allowed_serializers,
+        )
 
     def start(
         self,

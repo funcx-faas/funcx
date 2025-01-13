@@ -19,6 +19,7 @@ from globus_compute_endpoint.engines import (
     ThreadPoolEngine,
 )
 from globus_compute_endpoint.engines.base import GlobusComputeEngineBase
+from globus_compute_sdk.serialize.concretes import SELECTABLE_STRATEGIES
 from parsl import HighThroughputExecutor
 from parsl.executors.high_throughput.interchange import ManagerLost
 from parsl.providers import KubernetesProvider
@@ -167,6 +168,17 @@ def test_engine_submit_internal(
         final_result = serde.deserialize(result.data)
         assert final_result == 6
         break
+
+
+@pytest.mark.parametrize(
+    "engine_type",
+    (ProcessPoolEngine, ThreadPoolEngine, GlobusComputeEngine),
+)
+def test_allowed_serializers_passthrough_to_serde(engine_type, engine_runner):
+    engine = engine_runner(engine_type, allowed_serializers=SELECTABLE_STRATEGIES)
+
+    assert engine.serde is not None
+    assert engine.serde.allowed_deserializer_types == set(SELECTABLE_STRATEGIES)
 
 
 def test_gc_engine_system_failure(ez_pack_task, task_uuid, engine_runner):

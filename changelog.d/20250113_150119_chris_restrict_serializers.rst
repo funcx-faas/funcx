@@ -29,3 +29,21 @@ New Functionality
     #   The only allowed data serializer is JSONData.
     #
     #   (Hint: reserialize the arguments with JSONData and try again.)
+
+- Compute Endpoints can be configured to only deserialize and execute submissions that
+  were serialized with specific serialization strategies. For example, with the
+  following config:
+
+  .. code-block:: yaml
+
+    engine:
+        allowed_code_serializers:
+            - globus_compute_sdk.serialize.DillCodeSource
+            - globus_compute_sdk.serialize.DillCodeTextInspect
+        allowed_data_serializers:
+            - globus_compute_sdk.serialize.JSONData
+        type: ThreadPoolEngine
+
+  any submissions that used the default serialization strategies (``DillCode``,
+  ``DillDataBase64``) would be rejected, and users would be informed to use one of the
+  allowed strategies.

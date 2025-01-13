@@ -21,7 +21,6 @@ from parsl.app.python import timeout
 
 log = logging.getLogger(__name__)
 
-_serde = ComputeSerializer()
 _RESULT_SIZE_LIMIT = 10 * 1024 * 1024  # 10 MiB
 
 
@@ -33,6 +32,7 @@ def execute_task(
     run_dir: str | os.PathLike,
     result_size_limit: int = _RESULT_SIZE_LIMIT,
     run_in_sandbox: bool = False,
+    serde: ComputeSerializer = ComputeSerializer(),
 ) -> bytes:
     """Execute task is designed to enable any executor to execute a Task payload
     and return a Result payload, where the payload follows the globus-compute protocols
@@ -84,7 +84,7 @@ def execute_task(
     try:
         _task, task_buffer = _unpack_messagebody(task_body)
         log.debug("executing task task_id='%s'", task_id)
-        result = _call_user_function(task_buffer)
+        result = _call_user_function(task_buffer, serde)
 
         res_len = len(result)
         if res_len > result_size_limit:
@@ -142,7 +142,7 @@ def _unpack_messagebody(message: bytes) -> tuple[Task, str]:
     return task, task.task_buffer
 
 
-def _call_user_function(task_buffer: str, serde: ComputeSerializer = _serde) -> str:
+def _call_user_function(task_buffer: str, serde: ComputeSerializer) -> str:
     """Deserialize the buffer and execute the task.
     Parameters
     ----------
