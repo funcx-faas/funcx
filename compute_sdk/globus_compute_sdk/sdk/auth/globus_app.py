@@ -13,7 +13,8 @@ DEFAULT_CLIENT_ID = "4cf29807-cf21-49ec-9443-ff9a3fb9f81c"
 def get_globus_app(environment: str | None = None) -> GlobusApp:
     app_name = platform.node()
     client_id, client_secret = get_client_creds()
-    config = GlobusAppConfig(token_storage=get_token_storage(environment=environment))
+    token_storage = get_token_storage(environment=environment)
+    config = GlobusAppConfig(token_storage=token_storage)
 
     if client_id and client_secret:
         return ClientApp(
@@ -24,6 +25,7 @@ def get_globus_app(environment: str | None = None) -> GlobusApp:
         )
 
     elif client_secret:
+        token_storage.close()
         raise ValueError(
             "Both GLOBUS_COMPUTE_CLIENT_ID and GLOBUS_COMPUTE_CLIENT_SECRET must "
             "be set to use a client identity. Either set both environment "
