@@ -30,6 +30,7 @@ from globus_compute_endpoint.endpoint.config import UserEndpointConfig
 from globus_compute_endpoint.endpoint.config.utils import load_config_yaml
 from globus_compute_endpoint.endpoint.endpoint import Endpoint
 from globus_compute_endpoint.engines import ThreadPoolEngine
+from globus_compute_endpoint.logging_config import setup_logging
 from globus_compute_sdk.sdk.auth.auth_client import ComputeAuthClient
 from globus_compute_sdk.sdk.auth.globus_app import UserApp
 from globus_compute_sdk.sdk.compute_dir import ensure_compute_dir
@@ -138,6 +139,7 @@ def run_line(cli_runner):
         if stdin is None:
             stdin = "{}"  # silence some logs; incurred by invoke's sys.stdin choice
         result = cli_runner.invoke(app, args, input=stdin)
+        setup_logging()
         if assert_exit_code is not None:
             assert result.exit_code == assert_exit_code, (result.stdout, result.stderr)
         return result
@@ -202,6 +204,7 @@ def test_get_globus_app_with_scopes(mocker: MockFixture):
     for scope_list in app.scope_requirements.values():
         for scope in scope_list:
             scopes.append(str(scope))
+    app.config.token_storage.close()  # is a SQLiteStorage object
 
     assert len(scopes) > 0
     assert all(str(s) in scopes for s in WebClient.default_scope_requirements)

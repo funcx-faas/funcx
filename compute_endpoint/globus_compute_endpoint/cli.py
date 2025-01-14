@@ -1005,7 +1005,9 @@ def disable_on_boot_cmd(ep_dir: pathlib.Path):
 def cli_run():
     """Entry point for setuptools to point to"""
     app()
+    setup_logging()  # reset
 
 
 if __name__ == "__main__":
     app()
+    setup_logging()  # reset

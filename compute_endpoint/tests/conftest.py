@@ -3,6 +3,8 @@ from __future__ import annotations
 import random
 import signal
 import string
+import subprocess
+import threading
 import time
 import typing as t
 import uuid
@@ -10,6 +12,7 @@ from queue import Queue
 
 import globus_compute_sdk as gc
 import globus_sdk
+import psutil
 import pytest
 import responses
 from globus_compute_endpoint import engines
@@ -234,3 +237,48 @@ def htex_warns():
         return test
 
     assert any(_warned(str(w)) for w in pyt_w.list)
+
+
+@pytest.fixture(autouse=True)
+def resource_watcher():
+    p = psutil.Process()
+    ls_args = ("/bin/ls", "-lv", "--full-time", "--color=always", f"/proc/{p.pid}/fd/")
+    vm_beg = psutil.virtual_memory()
+    with p.oneshot():
+        mem_beg = p.memory_info()
+        fds_beg = p.num_fds()
+        thread_beg = p.num_threads()
+        ctx_beg = p.num_ctx_switches()
+        io_beg = p.io_counters()
+    ls_fds = subprocess.run(ls_args, capture_output=True)
+    os_fds_view_beg = ls_fds.stdout.decode()
+
+    yield
+
+    vm_end = psutil.virtual_memory()
+    with p.oneshot():
+        mem_end = p.memory_info()
+        fds_end = p.num_fds()
+        thread_end = p.num_threads()
+        ctx_end = p.num_ctx_switches()
+        io_end = p.io_counters()
+    ls_fds = subprocess.run(ls_args, capture_output=True)
+    os_fds_view_end = ls_fds.stdout.decode()
+
+    if fds_end > fds_beg:
+        thread_list = "\n  ".join(
+            f"{i:>3}: {repr(t)}" for i, t in enumerate(threading.enumerate(), start=1)
+        )
+        msg = (
+            f"\nSystem Virtual Memory:\n  {vm_beg=}\n  {vm_end=}"
+            f"\n\nProcess Memory:\n  {mem_beg=}\n  {mem_end=}"
+            f"\n\nThread count:\n  {thread_beg=}\n  {thread_end=}"
+            f"\n\nContext Switches:\n  {ctx_beg=}\n  {ctx_end=}"
+            f"\n\nI/O Counters:\n  {io_beg=}\n  {io_end=}"
+            f"\n\nFile Descriptors:\n  {fds_beg=}\n  {fds_end=}"
+            f"\n\nThreads (count: {p.num_threads()}):\n  {thread_list}"
+            f"\n\nOpen files (Before): {os_fds_view_beg}"
+            f"\nOpen files (After): {os_fds_view_end}"
+        )
+        msg = msg.replace("\n", "\n | ")
+        assert fds_end <= fds_beg, f"Left over file descriptors!!\n{msg}"
