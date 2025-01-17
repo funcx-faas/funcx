@@ -248,7 +248,7 @@ def resource_watcher():
         fds_beg = p.num_fds()
         thread_beg = p.num_threads()
         ctx_beg = p.num_ctx_switches()
-        io_beg = p.io_counters()
+        io_beg = getattr(p, "io_counters", lambda: "(not supported on this system)")()
     ls_fds = subprocess.run(ls_args, capture_output=True)
     os_fds_view_beg = ls_fds.stdout.decode()
 
@@ -260,7 +260,7 @@ def resource_watcher():
         fds_end = p.num_fds()
         thread_end = p.num_threads()
         ctx_end = p.num_ctx_switches()
-        io_end = p.io_counters()
+        io_end = getattr(p, "io_counters", lambda: "(not supported on this system)")()
     ls_fds = subprocess.run(ls_args, capture_output=True)
     os_fds_view_end = ls_fds.stdout.decode()
 
