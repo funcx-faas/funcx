@@ -126,7 +126,7 @@ def nodeslist(num=100):
 
 @pytest.fixture
 def engine_runner(
-    tmp_path, engine_heartbeat, nodeslist, reporting_period=0.1
+    request, tmp_path, engine_heartbeat, nodeslist, reporting_period=0.1
 ) -> t.Callable:
     engines_to_shutdown = []
 
@@ -173,6 +173,8 @@ def engine_runner(
         engine.start(
             endpoint_id=ep_id, run_dir=str(tmp_path), results_passthrough=queue
         )
+        if hasattr(engine, "job_status_poller"):
+            engine.job_status_poller._thread.name = f"{request.node.name}-ERUNNER"
         engines_to_shutdown.append(engine)
         return engine
 
