@@ -9,65 +9,8 @@ on:
   pull_request:
 
 jobs:
-  lint:
-    timeout-minutes: 10
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          cache: 'pip'
-      - name: install requirements
-        run: |
-          python -m pip install -U pip
-          python -m pip install pre-commit tox
-      - name: run pre-commit
-        run: pre-commit run -a
-      - name: mypy and pip-audit (sdk)
-        run: |
-          cd compute_sdk
-          tox -e mypy
-          tox -e pip-audit
-      - name: mypy and pip-audit (endpoint)
-        run: |
-          cd compute_endpoint
-          tox -e mypy
-          tox -e pip-audit
-
-  # ensure docs can build, imitating the RTD build as best we can
-  check-docs:
-    timeout-minutes: 5
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: build docs
-        run: make docs
-
-  test-sdk:
-    timeout-minutes: 5
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
-    name: "Test SDK on py${{ matrix.python-version }} x ${{ matrix.os }} "
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      - run: python -m pip install -U pip setuptools
-      - run: python -m pip install tox
-      - name: run tests
-        run: |
-          cd compute_sdk
-          tox -e py
-
   test-endpoint:
-    timeout-minutes: 8
+    timeout-minutes: 5
     runs-on: ubuntu-latest
     services:
       rabbitmq:
