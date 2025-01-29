@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import json
 import random
 import signal
 import string
+import subprocess
+import sys
+import threading
 import time
 import typing as t
 import uuid
@@ -10,6 +14,7 @@ from queue import Queue
 
 import globus_compute_sdk as gc
 import globus_sdk
+import psutil
 import pytest
 import responses
 from globus_compute_endpoint import engines
@@ -233,3 +238,67 @@ def htex_warns():
         return test
 
     assert any(_warned(str(w)) for w in pyt_w.list)
+
+
+def get_fds(pid):
+    if sys.platform == "darwin":
+        # Couldn't find timestamp and color equivalents for OSX
+        fd_args = ("/usr/sbin/lsof", "-p", str(pid))
+    else:
+        fd_args = (
+            "/bin/ls",
+            "-lv",
+            "--full-time",
+            "--color=always",
+            f"/proc/{pid}/fd/",
+        )
+    fd_output = subprocess.run(fd_args, capture_output=True)
+
+    # For darwin FDs we normally exclude ' txt ' see
+    # https://stackoverflow.com/questions/795236/in-mac-os-x-how-can-i-get-an-accurate-count-of-file-descriptor-usage # noqa E501
+    # But if doing diffs, do not need to worry about unchanged FDs
+    return fd_output.stdout.decode().split("\n")
+
+
+@pytest.fixture(autouse=True)
+def resource_watcher():
+    p = psutil.Process()
+    vm_beg = psutil.virtual_memory()
+    with p.oneshot():
+        mem_beg = p.memory_info()
+        fds_beg = p.num_fds()
+        thread_beg = p.num_threads()
+        ctx_beg = p.num_ctx_switches()
+        io_beg = getattr(p, "io_counters", lambda: "(not supported on this system)")()
+    os_fds_view_beg = get_fds(p.pid)
+
+    yield
+
+    vm_end = psutil.virtual_memory()
+    with p.oneshot():
+        mem_end = p.memory_info()
+        fds_end = p.num_fds()
+        thread_end = p.num_threads()
+        ctx_end = p.num_ctx_switches()
+        io_end = getattr(p, "io_counters", lambda: "(not supported on this system)")()
+    os_fds_view_end = get_fds(p.pid)
+
+    if fds_end > fds_beg:
+        thread_list = "\n  ".join(
+            f"{i:>3}: {repr(t)}" for i, t in enumerate(threading.enumerate(), start=1)
+        )
+        fd_af = [line for line in os_fds_view_end if line not in os_fds_view_beg]
+        fd_be = [line for line in os_fds_view_beg if line not in os_fds_view_end]
+        msg = (
+            f"\nSystem Virtual Memory:\n  {vm_beg=}\n  {vm_end=}"
+            f"\n\nProcess Memory:\n  {mem_beg=}\n  {mem_end=}"
+            f"\n\nThread count:\n  {thread_beg=}\n  {thread_end=}"
+            f"\n\nContext Switches:\n  {ctx_beg=}\n  {ctx_end=}"
+            f"\n\nI/O Counters:\n  {io_beg=}\n  {io_end=}"
+            f"\n\nFile Descriptors:\n  {fds_beg=}\n  {fds_end=}"
+            f"\n\nThreads (count: {p.num_threads()}):\n  {thread_list}"
+            f"\n\nOpen files diff before and after: \n"
+            f"{json.dumps(fd_be, indent=2)}\n  ->\n{json.dumps(fd_af, indent=2)}"
+        )
+        msg = msg.replace("\n", "\n | ")
+        assert fds_end <= fds_beg, f"Left over file descriptors!!\n{msg}"
