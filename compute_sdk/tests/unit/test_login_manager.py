@@ -36,6 +36,13 @@ def logman(mocker, tmp_path):
     return LoginManager()
 
 
+def test_login_manager_deprecated():
+    with pytest.warns(DeprecationWarning) as record:
+        LoginManager()
+    msg = "The `LoginManager` is deprecated"
+    assert any(msg in str(r.message) for r in record)
+
+
 def test_is_client_login():
     env = {CID_KEY: "some_id", CSC_KEY: "some_secret"}
     with mock.patch.dict(os.environ, env):

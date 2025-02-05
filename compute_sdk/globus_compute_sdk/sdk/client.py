@@ -73,6 +73,7 @@ class Client:
         data_serialization_strategy: SerializationStrategy | None = None,
         login_manager: LoginManagerProtocol | None = None,
         app: globus_sdk.GlobusApp | None = None,
+        authorizer: globus_sdk.authorizers.GlobusAuthorizer | None = None,
         **kwargs,
     ):
         """
@@ -99,14 +100,19 @@ class Client:
             Strategy to use when serializing function arguments. If None,
             globus_compute_sdk.serialize.DEFAULT_STRATEGY_DATA will be used.
 
-        login_manager: LoginManagerProtocol
+        login_manager: LoginManagerProtocol [Deprecated]
             Allows login logic to be overridden for specific use cases. If None,
-            a ``GlobusApp`` will be used. Mutually exclusive with ``app``.
+            a ``GlobusApp`` will be used. Mutually exclusive with ``app`` and
+            ``authorizer``.
 
         app: GlobusApp
             A ``GlobusApp`` that will handle authorization and storing and validating
             tokens. If None, a standard ``GlobusApp`` will be used. Mutually exclusive
-            with ``login_manager``.
+            with ``authorizer`` and ``login_manager``.
+
+        authorizer: GlobusAuthorizer
+            A ``GlobusAuthorizer`` that will generate authorization headers. Mutually
+            exclusive with ``app`` and ``login_manager``.
         """
         for arg_name in kwargs:
             msg = (
@@ -122,12 +128,20 @@ class Client:
         self._task_status_table: dict[str, dict] = {}
 
         self.app: globus_sdk.GlobusApp | None = None
-        self.login_manager: LoginManagerProtocol | None = None
+        self.authorizer: globus_sdk.authorizers.GlobusAuthorizer | None = None
+        self._login_manager: LoginManagerProtocol | None = None
         self._web_client: WebClient | None = None
         self._auth_client: globus_sdk.AuthClient | None = None
 
-        if app and login_manager:
-            raise ValueError("'app' and 'login_manager' are mutually exclusive.")
+        if sum(bool(x) for x in (app, authorizer, login_manager)) > 1:
+            raise ValueError(
+                "'app', 'authorizer' and 'login_manager' are mutually exclusive."
+            )
+        elif authorizer:
+            self.authorizer = authorizer
+            self._compute_web_client = _ComputeWebClient(
+                base_url=self.web_service_address, authorizer=self.authorizer
+            )
         elif login_manager:
             self.login_manager = login_manager
             self._compute_web_client = _ComputeWebClient(
@@ -148,6 +162,19 @@ class Client:
 
         if do_version_check:
             self.version_check()
+
+    @property
+    def login_manager(self):
+        warnings.warn(
+            "The 'Client.login_manager' attribute is deprecated.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._login_manager
+
+    @login_manager.setter
+    def login_manager(self, val: LoginManagerProtocol):
+        self._login_manager = val
 
     @property
     def auth_client(self):
@@ -210,6 +237,13 @@ class Client:
 
     def logout(self):
         """Remove credentials from your local system"""
+        if self.authorizer:
+            logger.warning(
+                "Logout not supported when client initialized with"
+                f" authorizer: {type(self.authorizer).__name__}"
+            )
+            return
+
         auth_obj = self.app or self.login_manager
         if auth_obj:
             auth_obj.logout()

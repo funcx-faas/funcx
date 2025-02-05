@@ -32,6 +32,13 @@ def logman(mocker, tmp_path):
     return AuthorizerLoginManager({})
 
 
+def test_authorizer_login_manager_deprecated():
+    with pytest.warns(DeprecationWarning) as record:
+        AuthorizerLoginManager({})
+    msg = "The `AuthorizerLoginManager` is deprecated"
+    assert any(msg in str(r.message) for r in record)
+
+
 def test_auth_client_requires_authorizer_openid_scope(mocker):
     alm = AuthorizerLoginManager({})
     with pytest.raises(KeyError) as pyt_exc:
