@@ -51,7 +51,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
     name: "Test SDK on py${{ matrix.python-version }} x ${{ matrix.os }} "
     runs-on: ${{ matrix.os }}
     steps:
@@ -78,7 +78,7 @@ jobs:
         options: --health-cmd "rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_virtual_hosts && rabbitmq-diagnostics -q check_port_connectivity" --health-interval 10s --health-timeout 5s --health-retries 5
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
     name: "Test Endpoint on py${{ matrix.python-version }} x ${{ matrix.os }} "
     steps:
       - uses: actions/checkout@v4

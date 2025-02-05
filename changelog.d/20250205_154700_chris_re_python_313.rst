@@ -1,0 +1,5 @@
+New Functionality
+^^^^^^^^^^^^^^^^^
+
+- The ``globus-compute-sdk`` and ``globus-compute-endpoint`` packages now support
+  Python version 3.13.
