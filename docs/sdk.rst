@@ -264,59 +264,31 @@ This also applies when starting a Globus Compute endpoint.
 .. note:: Globus Compute clients and endpoints will use the client credentials if they are set, so it is important to ensure the client submitting requests has access to an endpoint.
 
 
-.. _login manager:
+.. _existing-token:
 
-Using a Existing Tokens
+Using an Existing Token
 -----------------------
 
-To programmatically create a Client from tokens and remove the need to perform a Native App login flow you can use the *AuthorizerLoginManager*.
-The AuthorizerLoginManager is responsible for serving tokens to the Client as needed and can be instantiated using existing tokens.
+To create a |Client|_ from an existing access token and skip the interactive login flow, you can pass an |AccessTokenAuthorizer|_
+via the ``authorizer`` parameter:
 
-The AuthorizerLoginManager can be used to simply return static tokens and enable programmatic use of the Client.
+.. code-block:: python
+
+  import globus_sdk
+  from globus_compute_sdk import Executor, Client
+
+  authorizer = globus_sdk.AccessTokenAuthorizer(access_token="...")
+  gcc = Client(authorizer=authorizer)
+  gce = Executor(endpoint_id="...", client=gcc)
 
 .. note::
-    Accessing the Globus Compute API requires the Globus Auth scope:
-
-    .. code-block:: text
-
-      https://auth.globus.org/scopes/facd7ccc-c5f4-42aa-916b-a0e270e2c2a9/all
-
-    This is also programmatically available as the ``FUNCX_SCOPE`` attribute on
-    the ``Client`` class:
+    Accessing the Globus Compute API requires the Globus Compute scope:
 
     .. code-block:: python
 
-      >>> from globus_compute_sdk import Client
-      >>> Client.FUNCX_SCOPE
+      >>> from globus_sdk.scopes import ComputeScopes
+      >>> ComputeScopes.all
       'https://auth.globus.org/scopes/facd7ccc-c5f4-42aa-916b-a0e270e2c2a9/all'
-
-More details on the Globus Compute login manager prototcol are available `here. <https://github.com/globus/globus-compute/blob/main/compute_sdk/globus_compute_sdk/sdk/login_manager/protocol.py>`_
-
-
-.. code:: python
-
-  import globus_sdk
-  from globus_sdk.scopes import AuthScopes
-
-  from globus_compute_sdk import Executor, Client
-  from globus_compute_sdk.sdk.login_manager import AuthorizerLoginManager
-  from globus_compute_sdk.sdk.login_manager.manager import ComputeScopeBuilder
-
-  ComputeScopes = ComputeScopeBuilder()
-
-  # Create Authorizers from the Compute and Auth tokens
-  compute_auth = globus_sdk.AccessTokenAuthorizer(tokens[ComputeScopes.resource_server]['access_token'])
-  openid_auth = globus_sdk.AccessTokenAuthorizer(tokens[AuthScopes.openid]['access_token'])
-
-  # Create a Compute Client from these authorizers
-  compute_login_manager = AuthorizerLoginManager(
-      authorizers={ComputeScopes.resource_server: compute_auth,
-                   AuthScopes.resource_server: openid_auth}
-  )
-  compute_login_manager.ensure_logged_in()
-
-  gc = Client(login_manager=compute_login_manager)
-  gce = Executor(endpoint_id=tutorial_endpoint, client=gc)
 
 
 .. _specifying-serde-strategy:
@@ -409,6 +381,8 @@ and serializes a fresh copy each time it is invoked.
 
 .. |rarr| unicode:: 0x2192
 
+.. |AccessTokenAuthorizer| replace:: ``AccessTokenAuthorizer``
+.. _AccessTokenAuthorizer: https://globus-sdk-python.readthedocs.io/en/stable/authorization/globus_authorizers.html#globus_sdk.AccessTokenAuthorizer
 .. |Client| replace:: ``Client``
 .. _Client: reference/client.html
 .. |Executor| replace:: ``Executor``
