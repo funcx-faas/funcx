@@ -1,3 +1,10 @@
+New Functionality
+^^^^^^^^^^^^^^^^^
+
+- Added an optional ``authorizer`` parameter to the ``Client`` initializer to support
+  using a ``GlobusAuthorizer`` for authentication. This parameter is mutually exclusive
+  with ``app``.
+
 Deprecated
 ^^^^^^^^^^
 

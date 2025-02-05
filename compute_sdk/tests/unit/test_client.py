@@ -20,6 +20,7 @@ from globus_compute_sdk.serialize import ComputeSerializer
 from globus_compute_sdk.serialize.concretes import SELECTABLE_STRATEGIES
 from globus_sdk import ComputeClientV2, ComputeClientV3, UserApp
 from globus_sdk import __version__ as __version_globus__
+from globus_sdk.authorizers import GlobusAuthorizer
 from pytest_mock import MockerFixture
 
 _MOCK_BASE = "globus_compute_sdk.sdk.client."
@@ -692,12 +693,27 @@ def test_version_mismatch_only_warns_once_per_ep(mocker, gcc, mock_response, ep_
     assert mock_warn.warn.call_count == len(set(ep_ids))
 
 
-def test_client_globus_app_and_login_manager_mutually_exclusive():
-    app = mock.Mock(spec=UserApp)
-    login_manager = mock.Mock(spec=LoginManager)
+@pytest.mark.parametrize(
+    "has_app, has_authz, has_lm",
+    [(True, True, False), (True, False, True), (False, True, True)],
+)
+def test_client_mutually_exclusive_auth_method(
+    has_app: bool, has_authz: bool, has_lm: bool
+):
+    app = mock.Mock(spec=UserApp) if has_app else None
+    login_manager = mock.Mock(spec=LoginManager) if has_lm else None
+    authorizer = mock.Mock(spec=GlobusAuthorizer) if has_authz else None
+
     with pytest.raises(ValueError) as excinfo:
-        gc.Client(do_version_check=False, login_manager=login_manager, app=app)
-    assert "'app' and 'login_manager' are mutually exclusive" in str(excinfo.value)
+        gc.Client(
+            do_version_check=False,
+            login_manager=login_manager,
+            app=app,
+            authorizer=authorizer,
+        )
+    assert "'app', 'authorizer' and 'login_manager' are mutually exclusive" in str(
+        excinfo.value
+    )
 
 
 @pytest.mark.parametrize("custom_app", [True, False])
@@ -744,6 +760,19 @@ def test_client_handles_globus_app(
     mock_auth_client.assert_called_once_with(app=mock_app)
 
 
+def test_client_handles_authorizer(mocker: MockerFixture):
+    mock_compute_wc = mocker.patch(f"{_MOCK_BASE}_ComputeWebClient")
+    mock_authorizer = mock.Mock(spec=GlobusAuthorizer)
+
+    client = gc.Client(do_version_check=False, authorizer=mock_authorizer)
+
+    assert client.authorizer is mock_authorizer
+    assert client._compute_web_client is mock_compute_wc.return_value
+    mock_compute_wc.assert_called_once_with(
+        base_url=client.web_service_address, authorizer=mock_authorizer
+    )
+
+
 def test_client_handles_login_manager():
     mock_lm = mock.Mock(spec=LoginManager)
     client = gc.Client(do_version_check=False, login_manager=mock_lm)
@@ -767,6 +796,16 @@ def test_client_logout_with_login_manager():
     client = gc.Client(do_version_check=False, login_manager=mock_lm)
     client.logout()
     assert mock_lm.logout.called
+
+
+def test_client_logout_with_authorizer_warning(mocker):
+    mock_log = mocker.patch(f"{_MOCK_BASE}logger")
+    mock_authorizer = mock.Mock(spec=GlobusAuthorizer)
+    client = gc.Client(do_version_check=False, authorizer=mock_authorizer)
+    client.logout()
+    a, _ = mock_log.warning.call_args
+    assert "Logout not supported" in a[0]
+    assert type(mock_authorizer).__name__ in a[0]
 
 
 def test_web_client_deprecated():
