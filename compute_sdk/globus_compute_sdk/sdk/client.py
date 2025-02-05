@@ -99,7 +99,7 @@ class Client:
             Strategy to use when serializing function arguments. If None,
             globus_compute_sdk.serialize.DEFAULT_STRATEGY_DATA will be used.
 
-        login_manager: LoginManagerProtocol
+        login_manager: LoginManagerProtocol [Deprecated]
             Allows login logic to be overridden for specific use cases. If None,
             a ``GlobusApp`` will be used. Mutually exclusive with ``app``.
 
@@ -122,7 +122,7 @@ class Client:
         self._task_status_table: dict[str, dict] = {}
 
         self.app: globus_sdk.GlobusApp | None = None
-        self.login_manager: LoginManagerProtocol | None = None
+        self._login_manager: LoginManagerProtocol | None = None
         self._web_client: WebClient | None = None
         self._auth_client: globus_sdk.AuthClient | None = None
 
@@ -148,6 +148,19 @@ class Client:
 
         if do_version_check:
             self.version_check()
+
+    @property
+    def login_manager(self):
+        warnings.warn(
+            "The 'Client.login_manager' attribute is deprecated.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._login_manager
+
+    @login_manager.setter
+    def login_manager(self, val: LoginManagerProtocol):
+        self._login_manager = val
 
     @property
     def auth_client(self):
