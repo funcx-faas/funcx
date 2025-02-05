@@ -4,6 +4,7 @@ import logging
 import sys
 import threading
 import typing as t
+import warnings
 
 import globus_sdk
 from globus_sdk.scopes import AuthScopes
@@ -40,6 +41,13 @@ class LoginManager:
     }
 
     def __init__(self, *, environment: str | None = None) -> None:
+        warnings.warn(
+            "The `LoginManager` is deprecated. Please use `GlobusApp` objects"
+            "from the Globus SDK instead:"
+            " https://globus-compute.readthedocs.io/en/stable/sdk.html#globusapps",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
         self._token_storage = get_token_storage_adapter(environment=environment)
         self._access_lock = threading.Lock()
 

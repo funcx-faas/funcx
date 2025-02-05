@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 
 import globus_sdk
 from globus_compute_sdk.sdk.login_manager.manager import LoginManager
@@ -22,6 +23,13 @@ class AuthorizerLoginManager(LoginManagerProtocol):
     """
 
     def __init__(self, authorizers: dict[str, globus_sdk.RefreshTokenAuthorizer]):
+        warnings.warn(
+            "The `AuthorizerLoginManager` is deprecated. Please use `GlobusApp` objects"
+            "from the Globus SDK instead:"
+            " https://globus-compute.readthedocs.io/en/stable/sdk.html#globusapps",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
         self.authorizers = authorizers
 
     def get_auth_client(self) -> globus_sdk.AuthClient:
