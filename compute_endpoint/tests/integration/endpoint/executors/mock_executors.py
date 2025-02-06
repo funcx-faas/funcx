@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import multiprocessing
+import queue
 import typing as t
 import unittest.mock
 import uuid
@@ -14,14 +14,14 @@ from parsl.executors.errors import InvalidResourceSpecification
 class MockExecutor(unittest.mock.Mock):
     def __init__(self, *args, **kwargs):
         super().__init__(**kwargs)
-        self.results_passthrough: multiprocessing.Queue | None = None
+        self.results_passthrough: queue.Queue | None = None
         self.passthrough = True
 
     def start(
         self,
         endpoint_id: uuid.UUID | None = None,
         run_dir: str | None = None,
-        results_passthrough: multiprocessing.Queue = None,
+        results_passthrough: queue.Queue = None,
         funcx_client: Client = None,
     ):
         self.results_passthrough = results_passthrough

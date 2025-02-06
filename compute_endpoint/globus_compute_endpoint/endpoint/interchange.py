@@ -3,7 +3,6 @@ from __future__ import annotations
 import concurrent.futures
 import json
 import logging
-import multiprocessing
 import os
 import platform
 import queue
@@ -107,7 +106,7 @@ class EndpointInterchange:
         self._ep_info = ep_info
         self._reconnect_fail_counter = 0
         self.reconnect_attempt_limit = max(1, reconnect_attempt_limit)
-        self._quiesce_event = multiprocessing.Event()
+        self._quiesce_event = threading.Event()
         self._parent_pid = parent_pid
 
         if result_store is None:
@@ -305,9 +304,9 @@ class EndpointInterchange:
             # from a quarter of a second-ago.  Basically, check every second
             # (.wait()) if there are any items on disk to be sent.  If there are,
             # don't treat them any differently than "fresh" results: put the into
-            # the same multiprocessing queue as results incoming directly from
-            # the executors.  The normal processing by `process_pending_results()`
-            # will take over from there.
+            # the same queue as results incoming directly from the executors.  The
+            # normal processing by `process_pending_results()` will take over from
+            # there.
             while not self._quiesce_event.wait(timeout=1):
                 for task_id, packed_result in self.result_store:
                     log.debug("Retrieved stored result (%s)", task_id)
