@@ -10,6 +10,7 @@ import random
 import uuid
 from collections import namedtuple
 from contextlib import redirect_stdout
+from datetime import datetime
 from http import HTTPStatus
 from types import SimpleNamespace
 from unittest import mock
@@ -74,7 +75,10 @@ def mock_launch():
 
 @pytest.fixture
 def conf():
-    yield UserEndpointConfig(executors=[ThreadPoolEngine])
+    _conf = UserEndpointConfig(executors=[ThreadPoolEngine])
+    _conf.source_content = "# test source content"
+    _conf.source_content += "\nengine:\n  type: ThreadPoolEngine"
+    yield _conf
 
 
 @pytest.fixture
@@ -186,6 +190,33 @@ def test_start_endpoint_redacts_url_creds_from_logs(
     assert "Registration information: " in debug_args
     assert uname not in debug_args
     assert pword not in debug_args
+
+
+def test_start_endpoint_populates_ep_static_info(
+    mock_daemon, mock_ep_data, mock_reg_info, ep_uuid, randomstring
+):
+    ep, ep_dir, log_to_console, no_color, ep_conf = mock_ep_data
+    ep_args = (ep_dir, ep_uuid, ep_conf, log_to_console, no_color)
+    canary_value = randomstring()
+    ep_info = {"canary": canary_value}
+    with mock.patch(f"{_mock_base}Endpoint.daemon_launch") as mock_launch:
+        ep.start_endpoint(*ep_args, reg_info=mock_reg_info, ep_info=ep_info)
+    assert mock_launch.called, "Should launch successfully"
+
+    (*_, found), _k = mock_launch.call_args
+    assert found is ep_info
+    assert found["canary"] == canary_value, "Should *add* data, no overwrite"
+
+    found_start_iso = datetime.fromisoformat(found["start_iso"])
+    found_start_unix = found["start_unix"]
+    assert found_start_iso.tzinfo is not None, "Expect human readable time, host tz"
+    assert found_start_iso.timestamp() == found_start_unix, "Expect unixtime variant"
+    assert found["posix_uid"] == os.getuid()
+    assert found["posix_gid"] == os.getgid()
+    assert found["posix_groups"] == os.getgroups()
+    assert found["posix_pid"] == os.getpid()
+    assert found["posix_sid"] == os.getsid(os.getpid())
+    assert found["config_raw"] == ep_conf.source_content
 
 
 def test_start_endpoint_network_error(

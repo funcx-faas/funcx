@@ -19,6 +19,7 @@ import typing as t
 import uuid
 from concurrent.futures import Future
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import datetime
 from http import HTTPStatus
 
@@ -102,8 +103,24 @@ class UserEndpointRecord(BaseModel):
         return self.local_user_info.pw_name if self.local_user_info else ""
 
 
+@dataclass
+class MappedPosixIdentity:
+    local_user_record: pwd.struct_passwd
+
+    # Example structure:
+    # In this example data,
+    #  - the first mapper found no identities or failed
+    #  - the second mapper mapped uuid1 to both alice and bob and additionally mapped
+    #    uuid2 to charlie.
+    #  - the third mapper mapped uuid1 to darla
+    # [[], [{"uuid1": ["alice", "bob"], "uuid2": ["charlie"]}], [{"uuid1": ["darla"]}]]
+    globus_identity_candidates: list[list[dict[str, list[str]]]]
+
+    matched_identity: uuid.UUID | str | None
+
+
 T_CMD_START_ARGS = t.Tuple[
-    pwd.struct_passwd, t.Optional[t.List[str]], t.Optional[t.Dict]
+    MappedPosixIdentity, t.Optional[t.List[str]], t.Optional[t.Dict]
 ]
 
 
@@ -384,8 +401,9 @@ class EndpointManager:
         )
 
         try:
-            cached_rec, args, kwargs = cmd_start_args
-            updated_rec = pwd.getpwuid(cached_rec.pw_uid)
+            cached_identity, args, kwargs = cmd_start_args
+            cur_local_user = pwd.getpwuid(cached_identity.local_user_record.pw_uid)
+            cached_identity.local_user_record = cur_local_user
         except Exception as e:
             log.warning(
                 "Unable to update local user information; user EP will not be revived."
@@ -394,7 +412,7 @@ class EndpointManager:
             return
 
         try:
-            self.cmd_start_endpoint(updated_rec, args, kwargs)
+            self.cmd_start_endpoint(cached_identity, args, kwargs)
         except Exception:
             log.exception(
                 f"Unable to execute command: cmd_start_endpoint\n"
@@ -514,7 +532,7 @@ class EndpointManager:
             print("\033[?25h", end="", file=msg_out)
 
     def _event_loop(self):
-        parent_identities = set()
+        parent_identities: set[str] = set()
         if not is_privileged():
             client_options = {
                 "local_compute_services": self._config.local_compute_services,
@@ -545,7 +563,7 @@ class EndpointManager:
                 self._time_to_stop = True
                 return
 
-        last_heartbeat = 0
+        last_heartbeat = 0.0
         valid_method_name_re = re.compile(r"^cmd_[A-Za-z][0-9A-Za-z_]{0,99}$")
         max_skew_s = 180  # 3 minutes; ignore commands with out-of-date timestamp
         while not self._time_to_stop:
@@ -565,7 +583,7 @@ class EndpointManager:
                         "Command debug requested:"
                         f"\n  Delivery Tag: {d_tag}"
                         f"\n  Properties: {props}"
-                        f"\n  Body bytes: {body_log_b}"
+                        f"\n  Body bytes: {body_log_b!r}"
                     )
             except queue.Empty:
                 if self._command_stop_event.is_set():
@@ -622,6 +640,11 @@ class EndpointManager:
 
             local_user_rec = None
             local_username = None
+            mapped_idents = MappedPosixIdentity(
+                local_user_record=self._mu_user,
+                globus_identity_candidates=[],  # no mappings, initially
+                matched_identity=None,
+            )
             if not self.identity_mapper or parent_identities:
                 # we are not a privileged user, so *only* allow the identity (or
                 # linked identities) of the parent process auth'd to run tasks
@@ -649,15 +672,19 @@ class EndpointManager:
                     continue
                 local_user_rec = self._mu_user
                 local_username = self._mu_user.pw_name
+                # in the no-idmap case, we did not run a mapper, so
+                # `globus_identity_candidates` remains an empty list
 
             else:
                 try:
                     idmaps = self.identity_mapper.map_identities(identity_set)
+                    mapped_idents.globus_identity_candidates = idmaps
                     for mapped in idmaps:
                         if mapped:
                             first_found: dict = mapped[0]
                             ident, usernames = next(iter(first_found.items()))
                             local_username = usernames[0]
+                            mapped_idents.matched_identity = ident
                             break
 
                     if not local_username:
@@ -685,6 +712,7 @@ class EndpointManager:
 
                 try:
                     local_user_rec = pwd.getpwnam(local_username)
+                    mapped_idents.local_user_record = local_user_rec
 
                 except Exception as e:
                     exc_type = type(e).__name__
@@ -708,7 +736,7 @@ class EndpointManager:
                 if not command_func:
                     raise InvalidCommandError(f"Unknown or invalid command: {command}")
 
-                command_func(local_user_rec, command_args, command_kwargs)
+                command_func(mapped_idents, command_args, command_kwargs)
                 log.info(
                     f"Command process successfully forked for '{local_username}'"
                     f" (Globus effective identity: {effective_identity})."
@@ -872,7 +900,7 @@ class EndpointManager:
 
     def cmd_start_endpoint(
         self,
-        user_record: pwd.struct_passwd,
+        ident: MappedPosixIdentity,
         args: list[str] | None,
         kwargs: dict | None,
     ):
@@ -891,9 +919,10 @@ class EndpointManager:
                     f"User endpoint {ep_name} is already running (pid: {p}); "
                     "caching arguments in case it's about to shut down"
                 )
-                self._cached_cmd_start_args[p] = (user_record, args, kwargs)
+                self._cached_cmd_start_args[p] = (ident, args, kwargs)
                 return
 
+        user_record = ident.local_user_record
         udir, uid, gid = user_record.pw_dir, user_record.pw_uid, user_record.pw_gid
         uname = user_record.pw_name
 
@@ -907,7 +936,8 @@ class EndpointManager:
                     " endpoints, consider using a non-root user or removing privileges"
                     " from the UID."
                     f"\n  MU Process UID: {self._mu_user.pw_uid} ({p_uname})"
-                    f"\n  Requested UID:  {uid} ({uname})",
+                    f"\n  Requested UID:  {uid} ({uname})"
+                    f"\n  Via identity:   {ident.matched_identity}",
                 )
 
         proc_args = [
@@ -1082,9 +1112,19 @@ class EndpointManager:
             user_config = render_config_user_template(
                 self._config, template_str, user_config_schema, user_opts, user_runtime
             )
+            exit_code += 1
+
+            ep_info: dict = {"posix_ppid": os.getppid()}
+            if ident.matched_identity:
+                ep_info.update(
+                    globus_candidate_identities=ident.globus_identity_candidates,
+                    globus_matched_identity=str(ident.matched_identity),
+                )
+
             stdin_data_dict = {
                 "amqp_creds": kwargs.get("amqp_creds"),
                 "config": user_config,
+                "ep_info": ep_info,
             }
             if self._config.allowed_functions is not None:
                 stdin_data_dict["allowed_functions"] = self._config.allowed_functions

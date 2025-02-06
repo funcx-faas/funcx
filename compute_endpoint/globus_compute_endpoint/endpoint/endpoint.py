@@ -568,17 +568,18 @@ class Endpoint:
                 no_color=no_color,
             )
 
-            if not ep_info:
-                ep_info = {
-                    "posix_pid": os.getpid(),
-                    "posix_uid": os.getuid(),
-                    "posix_gid": os.getgid(),
-                    "posix_username": pwd.getpwuid(os.getuid()).pw_name,
-                    "config.yaml": endpoint_config.source_content,
-                }
             now_tz = datetime.now().astimezone()
-            ep_info["start_iso"] = now_tz.isoformat()
-            ep_info["start_unix"] = now_tz.timestamp()
+            ep_info.update(
+                posix_username=pwd.getpwuid(os.getuid()).pw_name,
+                posix_uid=os.getuid(),
+                posix_gid=os.getgid(),
+                posix_groups=os.getgroups(),
+                posix_pid=os.getpid(),
+                posix_sid=os.getsid(os.getpid()),
+                config_raw=endpoint_config.source_content,
+                start_iso=now_tz.isoformat(),
+                start_unix=now_tz.timestamp(),
+            )
 
             Endpoint.daemon_launch(
                 endpoint_uuid,

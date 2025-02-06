@@ -153,7 +153,7 @@ class GlobusComputeEngine(GlobusComputeEngineBase):
         job_status_kwargs.setdefault("strategy", strategy)
         job_status_kwargs.setdefault("strategy_period", 5.0)
         self.job_status_poller = JobStatusPoller(**job_status_kwargs)
-        # N.B. save `.add_executor()` until after starting executor; see .start()
+        # N.B. call `.add_executor()` *after* starting executor; see .start()
 
     @property
     def max_workers_per_node(self):
@@ -453,6 +453,7 @@ class GlobusComputeEngine(GlobusComputeEngineBase):
         Object containing info on the current status of the endpoint
         """
         managers = self.get_connected_managers()
+
         manager_info: dict[str, list] = {}
         for m in managers:
             jid = self.executor.blocks_to_job_id[m["block_id"]]
@@ -463,9 +464,7 @@ class GlobusComputeEngine(GlobusComputeEngineBase):
                 "python_version": m["python_version"],
             }
             manager_info.setdefault(jid, []).append(m_info)
-        for jid in list(manager_info):
-            if not manager_info[jid]:
-                del manager_info[jid]
+
         executor_status: t.Dict[str, t.Any] = {
             "managers": self.get_total_managers(managers=managers),  # aka: nodes
             "active_managers": self.get_total_active_managers(managers=managers),
