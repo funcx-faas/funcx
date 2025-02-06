@@ -227,6 +227,20 @@ to the workers.
    :language: yaml
 
 
+Stampede3 (TACC)
+^^^^^^^^^^^^^^^^
+
+.. image:: ../_static/images/stampede3.jpg
+
+`Stampede3 <https://tacc.utexas.edu/systems/stampede3/>`_ is a Dell technologies and Intel based supercomputer at the
+`Texas Advanced Computing Center (TACC) <https://tacc.utexas.edu/>`_. The following snippet shows an example
+configuration that uses the ``SlurmProvider`` to interface with the batch scheduler, and uses the ``SrunLauncher``
+to launch workers across nodes.
+
+
+.. literalinclude:: configs/stampede3.yaml
+   :language: yaml
+
 Pinning Workers to devices
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 

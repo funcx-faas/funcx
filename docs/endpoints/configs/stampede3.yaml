@@ -1,0 +1,41 @@
+display_name: Stampede3@TACC
+
+engine:
+  type: GlobusComputeEngine
+  max_workers_per_node: 2
+  worker_debug: False
+
+  address:
+    type: address_by_interface
+    ifname: ibp10s0
+
+  provider:
+    type: SlurmProvider
+
+    # e.g., EAR22001
+    account: {{ YOUR_TACC_ALLOCATION }}
+
+    # e.g., skx-dev
+    partition: {{ PARTITION }}
+
+    launcher:
+      type: SrunLauncher
+
+    # Enter scheduler_options if needed
+    scheduler_options: {{ OPTIONS }}
+
+    # Command to be run before starting a worker
+    # e.g., "module load Anaconda; source activate parsl_env"
+    worker_init: {{ COMMAND }}
+
+    # Add extra time for slow scheduler responses
+    cmd_timeout: 60
+
+    # Scale between 0-1 blocks with 2 nodes per block
+    nodes_per_block: 1
+    init_blocks: 0
+    min_blocks: 0
+    max_blocks: 1
+
+    # Hold blocks for 30 minutes
+    walltime: 00:10:00
